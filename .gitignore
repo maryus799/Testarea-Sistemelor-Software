@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# pytest
+.pytest_cache/
+
+# coverage
+.coverage
+htmlcov/
+
+# cosmic-ray
+session.sqlite
+.cosmic-ray/
+.cache/
+
+# IDE
+.vscode/
+.idea/

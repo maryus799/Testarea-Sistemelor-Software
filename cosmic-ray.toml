@@ -1,0 +1,9 @@
+[cosmic-ray]
+module-path = "bank_account.py"
+python-version = ""
+timeout = 10.0
+excluded-modules = []
+test-command = "python -m pytest test_bank_account.py -x -q"
+
+[cosmic-ray.distributor]
+name = "local"
