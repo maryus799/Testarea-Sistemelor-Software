@@ -4,6 +4,8 @@
 
 Acest proiect demonstrează strategiile de testare unitară prezentate la cursul de Testarea Sistemelor Software, aplicate pe clasa `BankAccount` — o implementare simplă a unui cont bancar cu operații de depunere, retragere și transfer.
 
+Funcția principală analizată este `deposit_multiple(amounts, min_amount, max_amount)`, care ilustrează atât testarea funcțională cât și cea structurală.
+
 **Framework de testare:** `unittest` (Python standard library) + `pytest`
 **Tool coverage:** `pytest-cov`
 **Tool mutanți:** `cosmic-ray`
@@ -15,11 +17,12 @@ Acest proiect demonstrează strategiile de testare unitară prezentate la cursul
 ```
 T1_Testare_Unitara/
 ├── bank_account.py         # Clasa testată
-├── test_bank_account.py    # Suite de teste (68 teste)
+├── test_bank_account.py    # Suite de teste (76 teste)
 ├── cosmic-ray.toml         # Configurație testare prin mutanți
 ├── README.md               # Documentație (acest fișier)
-└── imagini/                # Capturi de ecran și diagrame
+└── imagini/
     ├── diagrama_clase.png
+    ├── graf_flux.png
     ├── rulare_teste.png
     ├── coverage_report.png
     └── mutanti_raport.png
@@ -44,10 +47,10 @@ T1_Testare_Unitara/
 | Metodă | Parametri | Return | Excepții |
 |---|---|---|---|
 | `__init__(owner, initial_balance=0.0)` | owner: str, balance: float | — | ValueError |
-| `deposit(amount)` | amount: float | float (nou sold) | ValueError |
-| `withdraw(amount)` | amount: float | float (nou sold) | ValueError |
+| `deposit(amount)` | amount: float | float | ValueError |
+| `withdraw(amount)` | amount: float | float | ValueError |
 | `transfer(target, amount)` | target: BankAccount, amount: float | float | ValueError |
-| `deposit_multiple(amounts)` | amounts: list | float (nou sold) | ValueError |
+| `deposit_multiple(amounts, min_amount, max_amount)` | amounts: list, min_amount: float, max_amount: float | float | ValueError |
 | `close()` | — | None | — |
 | `get_balance()` | — | float | — |
 
@@ -61,145 +64,213 @@ T1_Testare_Unitara/
 
 | Element | Locație în cod |
 |---|---|
-| `if` fără `else` | Toate validările din `deposit()`, `withdraw()`, `transfer()` |
-| `if` cu `else` | `__str__()` — `"activ" if self.is_active else "inactiv"` |
-| Condiție simplă | `if amount <= 0`, `if not self.is_active` |
+| `if` fără `else` | Validările din `deposit()`, `withdraw()`, `transfer()`, `deposit_multiple()` |
+| `if` cu `else` | `deposit_multiple()` — verificare `max_amount` și `__str__()` |
+| Condiție simplă | `if not self.is_active`, `if not amounts`, `if min_amount < 0` |
+| Condiție compusă cu `and` | `deposit_multiple()` — `if amount is not None and amount > min_amount` |
 | Condiție compusă cu `or` | `transfer()` — `if target is None or not isinstance(target, BankAccount)` |
-| Condiție compusă cu `and` | `deposit_multiple()` — `if amount is not None and amount > 0` |
 | Instrucțiune repetitivă (`for`) | `deposit_multiple()` — `for amount in amounts` |
 
 ---
 
-## Strategii de testare
+## Testare funcțională pentru `deposit_multiple`
+
+### Specificație
+
+Funcția `deposit_multiple(amounts, min_amount=0.0, max_amount=None)` depune succesiv într-un cont bancar activ sumele din lista `amounts` care satisfac condițiile:
+- suma nu este `None`
+- suma este strict mai mare decât `min_amount` (implicit 0.0)
+- dacă `max_amount` este specificat, suma nu depășește `max_amount`
+
+Dacă nicio sumă din listă nu este validă sau lista este goală, se aruncă `ValueError`.
+
+**Precondiții:**
+- contul este activ (`is_active = True`)
+- `amounts` este o listă nevoidă
+- `min_amount >= 0`
+
+**Postcondiții:**
+- soldul contului crește cu suma depunerilor valide
+- se returnează noul sold
+
+---
 
 ### 1. Partiționare în clase de echivalență
 
-#### `deposit(amount)`
+Parametrii funcției și clasele lor:
 
-| Clasă | Condiție | Tip | Test reprezentativ |
-|---|---|---|---|
-| C1 (validă) | 0 < amount ≤ 10000 | valid | `deposit(500)` → succes |
-| C2 (invalidă) | amount ≤ 0 | invalid | `deposit(0)` → ValueError |
-| C3 (invalidă) | amount > 10000 | invalid | `deposit(10001)` → ValueError |
-| C4 (invalidă) | cont inactiv | invalid | după `close()`, `deposit(100)` → ValueError |
+**`amounts` (lista de sume):**
 
-#### `withdraw(amount)`
-
-| Clasă | Condiție | Tip | Test reprezentativ |
-|---|---|---|---|
-| C1 (validă) | 0 < amount ≤ min(5000, balance) | valid | `withdraw(500)` → succes |
-| C2 (invalidă) | amount ≤ 0 | invalid | `withdraw(-50)` → ValueError |
-| C3 (invalidă) | amount > 5000 | invalid | `withdraw(5001)` → ValueError |
-| C4 (invalidă) | amount > balance | invalid | `withdraw(3001)` când sold=3000 → ValueError |
-| C5 (invalidă) | cont inactiv | invalid | după `close()`, `withdraw(100)` → ValueError |
-
-#### `deposit_multiple(amounts)`
-
-| Clasă | Condiție | Tip | Test reprezentativ |
-|---|---|---|---|
-| C1 (validă) | listă cu sume pozitive | valid | `deposit_multiple([100, 200])` → succes |
-| C2 (invalidă) | listă goală | invalid | `deposit_multiple([])` → ValueError |
-| C3 (invalidă) | cont inactiv | invalid | după `close()` → ValueError |
-| C4 (invalidă) | toate sumele invalide | invalid | `deposit_multiple([-1, None])` → ValueError |
-| C5 (specială) | listă mixtă | parțial valid | sumele invalide sunt sarite |
-
-#### `__init__(owner, initial_balance)`
-
-| Clasă | Condiție | Tip |
+| Clasă | Mulțime | Tip |
 |---|---|---|
-| C1 (validă) | owner non-gol, balance ≥ 0 | valid |
-| C2 (invalidă) | owner = "" | invalid |
-| C3 (invalidă) | owner = "   " (doar spații) | invalid |
-| C4 (invalidă) | initial_balance < 0 | invalid |
+| A1 | { amounts \| toate elementele > min_amount și ≤ max_amount } | validă |
+| A2 | { amounts \| lista goală: amounts = [] } | invalidă |
+| A3 | { amounts \| toate elementele ≤ min_amount sau None } | invalidă |
+| A4 | { amounts \| amestec de elemente valide și invalide } | parțial validă |
+
+**`min_amount`:**
+
+| Clasă | Mulțime | Tip |
+|---|---|---|
+| M1 | { min_amount \| min_amount ≥ 0 } | validă |
+| M2 | { min_amount \| min_amount < 0 } | invalidă |
+
+**`max_amount`:**
+
+| Clasă | Mulțime | Tip |
+|---|---|---|
+| X1 | { max_amount \| max_amount = None } | validă (fără limită superioară) |
+| X2 | { max_amount \| max_amount > min_amount } | validă |
+
+**Starea contului:**
+
+| Clasă | Mulțime | Tip |
+|---|---|---|
+| S1 | { cont \| is_active = True } | validă |
+| S2 | { cont \| is_active = False } | invalidă |
+
+**Clase globale** (combinații relevante):
+
+| Clasă globală | Mulțime | Reprezentant ales |
+|---|---|---|
+| CG1 | { (amounts, min, max, cont) \| A1, M1, X1, S1 } | ([100, 200, 300], 0.0, None, activ) |
+| CG2 | { (amounts, min, max, cont) \| A2, M1, X1, S1 } | ([], 0.0, None, activ) → ValueError |
+| CG3 | { (amounts, min, max, cont) \| A3, M1, X1, S1 } | ([-100, None], 0.0, None, activ) → ValueError |
+| CG4 | { (amounts, min, max, cont) \| A4, M1, X1, S1 } | ([100, -50, None, 200], 0.0, None, activ) |
+| CG5 | { (amounts, min, max, cont) \| A1, M2, X1, S1 } | ([100], -1.0, None, activ) → ValueError |
+| CG6 | { (amounts, min, max, cont) \| A1, M1, X2, S1 } | ([100, 500, 200], 0.0, 300.0, activ) |
+| CG7 | { (amounts, min, max, cont) \| A1, M1, X1, S2 } | ([100], 0.0, None, inactiv) → ValueError |
 
 ---
 
 ### 2. Analiza valorilor de frontieră
 
-#### `deposit(amount)` — frontiere la 0 și MAX_DEPOSIT=10000
+**Frontiere pentru `amount` față de `min_amount` (implicit 0.0):**
 
-| Valoare | Descriere | Rezultat așteptat |
-|---|---|---|
-| 0.0 | sub limita minimă | ValueError |
-| 0.01 | minimul valid | succes |
-| 9999.99 | just sub maxim | succes |
-| 10000.0 | maximul valid (inclusiv) | succes |
-| 10000.01 | just peste maxim | ValueError |
+| Mulțime | Margine | Valoare testată | Rezultat așteptat |
+|---|---|---|---|
+| A_invalidă | max al invalidelor | amount = min_amount = 0.0 | sărit (conditie strict >) |
+| A_validă | min al validelor | amount = min_amount + 0.01 = 0.01 | depus |
+| A_validă | max al validelor (fără max_amount) | amount = 10000.0 (MAX_DEPOSIT) | depus |
+| A_invalidă | min al invalidelor peste max | amount = MAX_DEPOSIT + 0.01 | ValueError din deposit() |
 
-#### `withdraw(amount)` — frontiere la 0, MAX_WITHDRAWAL=5000 și balance
+**Frontiere pentru `amount` față de `max_amount` (ex: 300.0):**
 
-| Valoare | Descriere | Rezultat așteptat |
-|---|---|---|
-| 0.0 | sub limita minimă | ValueError |
-| 0.01 | minimul valid | succes |
-| 5000.0 | maximul valid al retragerii | succes |
-| 5000.01 | just peste limita retragerii | ValueError |
-| balance + 0.01 | cu 1 ban peste sold | ValueError |
+| Mulțime | Margine | Valoare testată | Rezultat așteptat |
+|---|---|---|---|
+| A_validă | max al validelor | amount = max_amount = 300.0 | depus (limită inclusivă) |
+| A_invalidă | min al invalidelor | amount = max_amount + 0.01 = 300.01 | sărit |
+
+**Frontiere pentru `min_amount`:**
+
+| Mulțime | Margine | Valoare testată | Rezultat așteptat |
+|---|---|---|---|
+| M_invalidă | max al invalidelor | min_amount = -0.01 | ValueError |
+| M_validă | min al validelor | min_amount = 0.0 | succes |
 
 ---
 
-### 3. Acoperire instrucțiune, decizie, condiție
+## Testare structurală pentru `deposit_multiple`
 
-Testele din clasa `TestStatementAndBranchCoverage` sunt proiectate să execute fiecare instrucțiune și fiecare ramură (`if/else`) din cod cel puțin o dată.
-
-**Ramuri acoperite în `deposit()`:**
-- `not is_active` → True (cont inactiv)
-- `not is_active` → False + `amount <= 0` → True
-- `amount <= 0` → False + `amount > MAX_DEPOSIT` → True
-- Toate condițiile False → succes
-
-**Ramuri acoperite în `withdraw()`:**
-- `not is_active` → True
-- `amount <= 0` → True
-- `amount > MAX_WITHDRAWAL` → True
-- `amount > balance` → True
-- Toate False → succes
-
-**Ramuri acoperite în `transfer()`:**
-- `target is None or not isinstance(...)` → True
-- `target is self` → True
-- `not target.is_active` → True
-- Toate False → succes
-
-**Ramuri acoperite în `deposit_multiple()`:**
-- `not is_active` → True
-- `not amounts` → True (listă goală)
-- `amount is not None and amount > 0` → True și False (condiție compusă)
-- `depuneri_valide == 0` → True
-- Toate condițiile favorabile → succes
-
-**Rezultat coverage:**
+### Numerotarea instrucțiunilor
 
 ```
-Name              Stmts   Miss Branch BrPart  Cover   Missing
--------------------------------------------------------------
-bank_account.py      62      0     34      0   100%
--------------------------------------------------------------
-TOTAL                62      0     34      0   100%
+1   def deposit_multiple(self, amounts, min_amount=0.0, max_amount=None):
+2       if not self.is_active:
+3           raise ValueError("Contul este inactiv.")
+4       if not amounts:
+5           raise ValueError("Lista de sume nu poate fi goala.")
+6       if min_amount < 0:
+7           raise ValueError("Suma minima nu poate fi negativa.")
+8       depuneri_valide = 0
+9       for amount in amounts:
+10          if amount is not None and amount > min_amount:
+11              if max_amount is not None and amount > max_amount:
+12                  pass
+13              else:
+14                  self.deposit(amount)
+15                  depuneri_valide += 1
+16      if depuneri_valide == 0:
+17          raise ValueError("Nicio suma valida.")
+18      return self.balance
 ```
 
-![Raport coverage](imagini/coverage_report.png)
+### Graful de flux de control
 
-✅ **100% statement coverage, 100% branch coverage**
+![Graf flux deposit_multiple](imagini/graf_flux.png)
 
----
+### Nodurile grafului
 
-### 4. Circuite independente (Path Coverage)
-
-Analiza ciclomatică pentru metoda `transfer()` identifică 6 circuite independente:
-
-| Circuit | Condiție | Comportament |
+| Nod | Instrucțiuni | Descriere |
 |---|---|---|
-| P1 | `target is None or not isinstance(target, BankAccount)` | raise ValueError |
-| P2 | `target is self` | raise ValueError |
-| P3 | `not target.is_active` | raise ValueError |
-| P4 | `amount > src.balance` | raise ValueError (propagat din withdraw) |
-| P5 | Transfer reușit normal | return nou sold |
-| P6 | Transfer ce golește complet sursa | sold sursă = 0 |
+| N1 | 1 | intrare în funcție |
+| N2 | 2-3 | decizie: cont inactiv? |
+| N3 | 4-5 | decizie: lista goală? |
+| N4 | 6-7 | decizie: min_amount < 0? |
+| N5 | 8 | inițializare depuneri_valide = 0 |
+| N6 | 9 | condiție buclă for |
+| N7 | 10 | decizie: amount valid față de min_amount? |
+| N8 | 11 | decizie: amount depășește max_amount? |
+| N9 | 12 | pass (suma sărit) |
+| N10 | 14-15 | deposit + incrementare contor |
+| N11 | 16-17 | decizie: nicio depunere validă? |
+| N12 | 18 | return balance |
+
+### Acoperire la nivel de instrucțiune (Statement Coverage)
+
+Fiecare instrucțiune (nod) trebuie parcursă cel puțin o dată:
+
+| Test | Input | Noduri parcurse |
+|---|---|---|
+| T1 | cont inactiv, [100] | N1→N2→N3 (stop: ValueError) |
+| T2 | activ, [] | N1→N2→N3→N4 (stop: ValueError) |
+| T3 | activ, [-1], min=0 | N1→N2→N3→N4→N5→N6→N7→N6→N11→N17 |
+| T4 | activ, [100, 500], max=300 | N1→...→N6→N7→N8→N9→N6→N7→N8→N10→N6→N11→N12 |
+| T5 | activ, [100] | N1→N2→N3→N4→N5→N6→N7→N8→N10→N6→N11→N12 |
+
+### Acoperire la nivel de decizie (Branch Coverage)
+
+Fiecare ramură a fiecărei decizii trebuie parcursă:
+
+| Decizie | Ramura True | Ramura False |
+|---|---|---|
+| N2: `not is_active` | cont inactiv → ValueError | cont activ → continuă |
+| N3: `not amounts` | listă goală → ValueError | listă nevoidă → continuă |
+| N4: `min_amount < 0` | min negativ → ValueError | min valid → continuă |
+| N6: condiție `for` | mai sunt elemente → N7 | lista epuizată → N11 |
+| N7: `amount valid` | amount valid → N8 | amount invalid → N6 |
+| N8: `amount > max` | depășește max → N9 | în interval → N10 |
+| N11: `depuneri == 0` | nicio depunere → ValueError | cel puțin una → return |
+
+### Acoperire la nivel de condiție (Condition Coverage)
+
+Condiții individuale și valorile lor:
+
+| Condiție compusă | Condiție individuală | True | False |
+|---|---|---|---|
+| `amount is not None and amount > min_amount` | `amount is not None` | amount = 100 | amount = None |
+| `amount is not None and amount > min_amount` | `amount > min_amount` | amount = 100, min = 0 | amount = 0, min = 0 |
+| `max_amount is not None and amount > max_amount` | `max_amount is not None` | max = 300 | max = None |
+| `max_amount is not None and amount > max_amount` | `amount > max_amount` | amount = 500, max = 300 | amount = 100, max = 300 |
+
+### Circuite independente
+
+Complexitatea ciclomatică: **V(G) = e - n + 2**
+
+Noduri (n): 12, Arce (e): 16 → **V(G) = 16 - 12 + 2 = 6 circuite independente**
+
+| Circuit | Cale | Descriere |
+|---|---|---|
+| C1 | N1→N2→STOP | cont inactiv |
+| C2 | N1→N2→N3→STOP | listă goală |
+| C3 | N1→N2→N3→N4→STOP | min_amount negativ |
+| C4 | N1→...→N6→N7→N6→N11→STOP | toate sumele invalide |
+| C5 | N1→...→N6→N7→N8→N9→N6→N11→N12 | sume peste max_amount |
+| C6 | N1→...→N6→N7→N8→N10→N6→N11→N12 | depunere reușită |
 
 ---
 
-### 5. Analiză raport generat de cosmic-ray
+## Raport testare prin mutanți (cosmic-ray)
 
 **Configurație:**
 ```toml
@@ -209,86 +280,37 @@ timeout = 10.0
 test-command = "python -m pytest test_bank_account.py -x -q"
 ```
 
-**Prima rulare** (fără testele killer din secțiunea 6):
+**Prima rulare** (fără testele killer):
 ```
-total jobs: 79
-complete: 79 (100.00%)
-surviving mutants: 6 (7.59%)
+total jobs: 128
+surviving mutants: 9 (7.03%)
 ```
 
-Dintre cei 6 supraviețuitori, 4 erau echivalenți și 2 erau **neechivalenți**:
+Mutanți neechivalenți identificați:
 
-| ID | Locație | Modificare | Efect în producție |
+| ID | Locație | Modificare | Efect |
 |---|---|---|---|
-| M1 | linia 59 — `deposit()` | `amount > MAX_DEPOSIT` → `amount >= MAX_DEPOSIT` | depunerea de exact 10000 ar fi refuzată greșit |
-| M2 | linia 84 — `withdraw()` | `amount > self.balance` → `amount >= self.balance` | retragerea întregului sold ar fi refuzată greșit |
-
-![Raport mutanți](imagini/mutanti_raport.png)
-
----
-
-### 6. Teste suplimentare pentru mutanți neechivalenți
-
-După identificarea celor 2 mutanți neechivalenți în raportul cosmic-ray, au fost scrise teste dedicate:
-
-**Test killer M1** — ucide mutantul de la linia 59:
-```python
-def test_killer_m1_deposit_exact_max_must_succeed(self):
-    acc = BankAccount("Test", 0.0)
-    result = acc.deposit(10000.0)
-    self.assertEqual(result, 10000.0)
-    # Cod original: 10000 > 10000 → False → trece ✅
-    # Mutant:       10000 >= 10000 → True  → ValueError ❌ → mutant ucis
-```
-
-**Test killer M2** — ucide mutantul de la linia 84:
-```python
-def test_killer_m2_withdraw_full_balance_must_succeed(self):
-    acc = BankAccount("Test", 3000.0)
-    result = acc.withdraw(3000.0)
-    self.assertEqual(result, 0.0)
-    # Cod original: 3000 > 3000 → False → trece ✅
-    # Mutant:       3000 >= 3000 → True  → ValueError ❌ → mutant ucis
-```
+| M1 | `deposit()` linia 59 | `amount > MAX_DEPOSIT` → `amount >= MAX_DEPOSIT` | depunerea de exact 10000 refuzată greșit |
+| M2 | `withdraw()` linia 84 | `amount > self.balance` → `amount >= self.balance` | retragerea soldului integral refuzată greșit |
 
 **A doua rulare** (cu testele killer adăugate):
 ```
-total jobs: 79
-complete: 79 (100.00%)
-surviving mutants: 4 (5.06%)
+total jobs: 128
+surviving mutants: 7 (5.47%)
 ```
 
-✅ Cei 2 mutanți neechivalenți au fost uciși. Rămân doar 4 supraviețuitori echivalenți.
-
----
+![Raport mutanți](imagini/mutanti_raport.png)
 
 ### Analiza mutanților echivalenți rămași
 
-#### Mutant E1: `ReplaceComparisonOperator_Is_Eq`
+| Mutant | Locație | Modificare | Motiv echivalență |
+|---|---|---|---|
+| E1: `ReplaceComparisonOperator_Is_Eq` | `transfer()` — `target is self` | `is` → `==` | `__eq__` nedefinit, `is` și `==` identice |
+| E2: `ReplaceComparisonOperator_Eq_LtE` | `deposit_multiple()` — `depuneri_valide == 0` | `==` → `<=` | contorul nu poate fi negativ |
+| E3-E5: `NumberReplacer` (2,4,5) | `MIN_BALANCE = 0.0` | `0.0` → alt număr | constanta nefolosită în logică |
+| E6-E7: `NumberReplacer` (16,18) | `deposit_multiple()` — `depuneri_valide = 0` | `0` → alt număr | contorul nu poate fi negativ |
 
-**Locație:** `transfer()` — condiția `target is self`
-**Mutație:** `target is self` → `target == self`
-**Motiv echivalență:** Clasa `BankAccount` nu suprascrie `__eq__`, deci Python folosește identitatea obiectului implicit. Operatorii `is` și `==` se comportă identic — niciun test nu poate distinge cele două versiuni.
-
-#### Mutant E2: `ReplaceComparisonOperator_Eq_LtE`
-
-**Locație:** `deposit_multiple()` — condiția `depuneri_valide == 0`
-**Mutație:** `depuneri_valide == 0` → `depuneri_valide <= 0`
-**Motiv echivalență:** Variabila `depuneri_valide` este un contor care pornește de la 0 și doar crește — nu poate fi niciodată negativă. Prin urmare `== 0` și `<= 0` se comportă identic în acest context.
-
-#### Mutanți E3, E4, E5: `NumberReplacer` (2, 4, 5)
-
-**Locație:** Constanta `MIN_BALANCE = 0.0`
-**Mutație:** Valoarea `0.0` înlocuită cu alte numere
-**Motiv echivalență:** `MIN_BALANCE` este definită în clasă dar nu este folosită în nicio logică de validare. Modificarea ei nu schimbă comportamentul programului.
-
-#### Mutanți E6, E7: `NumberReplacer` (16, 18)
-
-**Locație:** `deposit_multiple()` — valoarea `0` din `depuneri_valide = 0` și `if depuneri_valide == 0`
-**Mutație:** Valoarea `0` înlocuită cu alte numere
-**Motiv echivalență:** Acești mutanți sunt detectați de același raționament ca E2 — contorul nu poate fi negativ, deci înlocuirea lui `0` cu `-1` în inițializare sau comparație nu schimbă comportamentul observabil prin teste.
-
-> **Concluzie:** Toți 7 mutanții rămași sunt echivalenți și nu pot fi uciși prin niciun test. Mutation score efectiv pe cod funcțional: **101/101 = 100%**.
+> **Concluzie:** Toți 7 mutanții rămași sunt echivalenți. Mutation score efectiv: **101/101 = 100%**.
 
 ---
 
@@ -309,9 +331,11 @@ python -m pytest test_bank_account.py -v
 python -m pytest test_bank_account.py --cov=bank_account --cov-branch --cov-report=term-missing
 ```
 
+![Raport coverage](imagini/coverage_report.png)
+
 ### Rulare testare prin mutanți
 ```bash
-cosmic-ray init cosmic-ray.toml session.sqlite
+cosmic-ray init cosmic-ray.toml session.sqlite --force
 cosmic-ray exec cosmic-ray.toml session.sqlite
 cr-report session.sqlite
 cr-report session.sqlite --surviving-only
@@ -325,13 +349,13 @@ cr-report session.sqlite --surviving-only
 
 | Metrică | Valoare |
 |---|---|
-| Număr total teste | 68 |
-| Teste trecute | 68/68 (100%) |
-| Timp rulare | ~0.14s |
-| Statement coverage | 100% |
-| Branch coverage | 100% |
-| Mutanți generați | 108 |
-| Mutanți eliminați | 101 (93.52%) |
+| Număr total teste | 76 |
+| Teste trecute | 76/76 (100%) |
+| Timp rulare | ~0.19s |
+| Statement coverage | 100% (66 statements) |
+| Branch coverage | 100% (38 branches) |
+| Mutanți generați | 128 |
+| Mutanți eliminați | 121 (94.53%) |
 | Mutanți neechivalenți uciși cu teste dedicate | 2 |
 | Mutanți supraviețuitori echivalenți | 7 |
 | Mutation score efectiv (fără echivalenți) | 100% |

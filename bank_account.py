@@ -112,32 +112,43 @@ class BankAccount:
         target.deposit(amount)
         return self.balance
 
-    def deposit_multiple(self, amounts: list) -> float:
+    def deposit_multiple(self, amounts: list, min_amount: float = 0.0, max_amount: float = None) -> float:
         """
         Depune mai multe sume succesiv in cont.
 
-        Foloseste o instructiune repetitiva (for) pentru a procesa
-        fiecare suma din lista. Sare peste sumele invalide (None sau <= 0).
+        Contine:
+        - instructiune repetitiva (for)
+        - if fara else (validari initiale)
+        - if cu else (verificare interval suma)
+        - conditie simpla: if not self.is_active
+        - conditie compusa: if amount is not None and amount >= min_amount
 
         Args:
             amounts: Lista de sume de depus
+            min_amount: Suma minima acceptata (implicit 0.0)
+            max_amount: Suma maxima acceptata (implicit None = fara limita superioara)
 
         Returns:
             Noul sold dupa toate depunerile valide
 
         Raises:
-            ValueError: daca lista este goala sau contul este inactiv
+            ValueError: daca lista este goala, contul este inactiv sau nicio suma valida
         """
         if not self.is_active:
             raise ValueError("Contul este inactiv.")
         if not amounts:
             raise ValueError("Lista de sume nu poate fi goala.")
+        if min_amount < 0:
+            raise ValueError("Suma minima nu poate fi negativa.")
 
         depuneri_valide = 0
         for amount in amounts:
-            if amount is not None and amount > 0:
-                self.deposit(amount)
-                depuneri_valide += 1
+            if amount is not None and amount > min_amount:
+                if max_amount is not None and amount > max_amount:
+                    pass  # suma depaseste maximul, se sare
+                else:
+                    self.deposit(amount)
+                    depuneri_valide += 1
 
         if depuneri_valide == 0:
             raise ValueError("Nicio suma valida in lista.")

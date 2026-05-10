@@ -513,21 +513,33 @@ class TestAdditionalCases(unittest.TestCase):
 
 
 # ===========================================================================
-# 7. TESTE PENTRU DEPOSIT_MULTIPLE (instructiune repetitiva + conditie compusa)
+# 7. TESTE PENTRU DEPOSIT_MULTIPLE
+# (instructiune repetitiva + conditie simpla + conditie compusa + if cu else)
 # ===========================================================================
-# deposit_multiple(amounts):
-#   Clasa valida:     lista cu sume valide → toate depuse
-#   Clasa invalida 1: lista goala → ValueError
-#   Clasa invalida 2: cont inactiv → ValueError
-#   Clasa invalida 3: toate sumele invalide → ValueError
-#   Caz special:      lista mixta (valide + invalide) → doar cele valide depuse
+# deposit_multiple(amounts, min_amount=0.0, max_amount=None):
+#
+# Clase de echivalenta:
+#   Clasa valida 1:   lista cu sume > min_amount              → depuse
+#   Clasa valida 2:   lista mixta (valide + invalide)         → doar validele depuse
+#   Clasa invalida 1: lista goala                             → ValueError
+#   Clasa invalida 2: cont inactiv                            → ValueError
+#   Clasa invalida 3: toate sumele invalide                   → ValueError
+#   Clasa invalida 4: min_amount negativ                      → ValueError
+#
+# Valori de frontiera pentru min_amount si max_amount:
+#   amount = min_amount       → invalida (conditie: amount > min_amount)
+#   amount = min_amount + 0.01 → valida
+#   amount = max_amount       → valida (conditie: amount <= max_amount)
+#   amount = max_amount + 0.01 → invalida
 # ===========================================================================
 
 class TestDepositMultiple(unittest.TestCase):
-    """Teste pentru metoda deposit_multiple — instructiune repetitiva si conditie compusa"""
+    """Teste pentru metoda deposit_multiple cu 3 parametri"""
 
     def setUp(self):
         self.account = BankAccount("Ion Popescu", 0.0)
+
+    # --- Clase de echivalenta ---
 
     def test_deposit_multiple_valid_list(self):
         """DM-1: lista cu sume valide — toate se depun corect"""
@@ -545,13 +557,14 @@ class TestDepositMultiple(unittest.TestCase):
             self.account.deposit_multiple([])
 
     def test_deposit_multiple_inactive_account(self):
-        """DM-4: cont inactiv → ValueError (conditie simpla)"""
+        """DM-4: cont inactiv → ValueError (conditie simpla: if not self.is_active)"""
         self.account.close()
         with self.assertRaises(ValueError):
             self.account.deposit_multiple([100.0, 200.0])
 
     def test_deposit_multiple_mixed_list(self):
-        """DM-5: lista mixta — sumele invalide sunt sarite (conditie compusa: amount is not None and amount > 0)"""
+        """DM-5: lista mixta — sumele invalide sunt sarite
+        (conditie compusa: if amount is not None and amount > min_amount)"""
         result = self.account.deposit_multiple([100.0, -50.0, 200.0, None, 300.0])
         self.assertEqual(result, 600.0)
 
@@ -571,18 +584,67 @@ class TestDepositMultiple(unittest.TestCase):
         self.account.deposit_multiple([100.0, 200.0])
         self.assertEqual(self.account.balance, 1300.0)
 
-    # Teste pentru conditia compusa din transfer()
-    def test_transfer_none_target_compound(self):
-        """DM-9: conditie compusa in transfer — target None → ValueError"""
+    def test_deposit_multiple_negative_min_amount(self):
+        """DM-9: min_amount negativ → ValueError"""
         with self.assertRaises(ValueError):
-            self.account.deposit(500.0)
+            self.account.deposit_multiple([100.0], min_amount=-1.0)
+
+    # --- Teste pentru parametrul min_amount ---
+
+    def test_deposit_multiple_with_min_amount(self):
+        """DM-10: doar sumele > min_amount sunt depuse"""
+        result = self.account.deposit_multiple([50.0, 100.0, 200.0], min_amount=100.0)
+        self.assertEqual(result, 200.0)
+
+    def test_deposit_multiple_amount_equal_to_min(self):
+        """DM-11: BVA — amount = min_amount → invalida (conditie strict >)"""
+        with self.assertRaises(ValueError):
+            self.account.deposit_multiple([100.0], min_amount=100.0)
+
+    def test_deposit_multiple_amount_just_over_min(self):
+        """DM-12: BVA — amount = min_amount + 0.01 → valida"""
+        result = self.account.deposit_multiple([100.01], min_amount=100.0)
+        self.assertAlmostEqual(result, 100.01)
+
+    # --- Teste pentru parametrul max_amount (if cu else) ---
+
+    def test_deposit_multiple_with_max_amount(self):
+        """DM-13: sumele > max_amount sunt sarite (ramura if cu else)"""
+        result = self.account.deposit_multiple(
+            [100.0, 500.0, 200.0], max_amount=300.0)
+        self.assertEqual(result, 300.0)
+
+    def test_deposit_multiple_amount_equal_to_max(self):
+        """DM-14: BVA — amount = max_amount → valida (limita inclusiva)"""
+        result = self.account.deposit_multiple([300.0], max_amount=300.0)
+        self.assertEqual(result, 300.0)
+
+    def test_deposit_multiple_amount_just_over_max(self):
+        """DM-15: BVA — amount = max_amount + 0.01 → sarita"""
+        with self.assertRaises(ValueError):
+            self.account.deposit_multiple([300.01], max_amount=300.0)
+
+    def test_deposit_multiple_min_and_max(self):
+        """DM-16: combinatie min_amount si max_amount — doar sumele in interval depuse"""
+        result = self.account.deposit_multiple(
+            [50.0, 100.0, 200.0, 300.0, 400.0],
+            min_amount=100.0,
+            max_amount=300.0)
+        self.assertEqual(result, 500.0)
+
+    # --- Teste conditie compusa in transfer() ---
+
+    def test_transfer_none_target_compound(self):
+        """DM-17: conditie compusa in transfer — target None → ValueError"""
+        self.account.deposit(500.0)
+        with self.assertRaises(ValueError):
             self.account.transfer(None, 100.0)
 
     def test_transfer_invalid_type_compound(self):
-        """DM-10: conditie compusa in transfer — target de tip gresit → ValueError"""
+        """DM-18: conditie compusa in transfer — target de tip gresit → ValueError"""
+        self.account.deposit(500.0)
         with self.assertRaises(ValueError):
-            self.account.deposit(500.0)
-            self.account.transfer("not_a_account", 100.0)
+            self.account.transfer("not_an_account", 100.0)
 
 
 if __name__ == "__main__":
