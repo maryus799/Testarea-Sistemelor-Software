@@ -314,6 +314,31 @@ surviving mutants: 7 (5.47%)
 
 ---
 
+## Configurație hardware și software
+
+### Hardware
+
+| Componentă | Specificație |
+|---|---|
+| Procesor | Intel Core i9-13900H (13th Gen) |
+| Memorie RAM | 32 GB |
+| Sistem de operare | Microsoft Windows 11 Home 64-bit |
+
+### Software
+
+| Tool | Versiune | Rol |
+|---|---|---|
+| Python | 3.12.3 | Limbaj de programare |
+| pytest | 9.0.2 | Framework de testare |
+| pytest-cov | 7.1.0 | Măsurare acoperire cod |
+| pluggy | 1.6.0 | Sistem de plugin-uri pytest |
+| cosmic-ray | 8.4.6 | Testare prin mutanți |
+| diagrams.net | online | Realizare diagrame |
+
+> Nu s-a utilizat o mașină virtuală. Proiectul a rulat direct pe sistemul de operare nativ.
+
+---
+
 ## Rulare
 
 ### Instalare dependențe
@@ -364,20 +389,16 @@ cr-report session.sqlite --surviving-only
 
 ## Referințe bibliografice
 
-1. pytest Documentation. *pytest: helps you write better programs*.
-   https://docs.pytest.org/en/stable/
+[1] pytest Documentation, *pytest: helps you write better programs*, https://docs.pytest.org/en/stable/, Data ultimei accesări: 10 mai 2026.
 
-2. pytest-cov Documentation. *pytest-cov: Coverage plugin for pytest*.
-   https://pytest-cov.readthedocs.io/en/latest/
+[2] pytest-cov Documentation, *pytest-cov: Coverage plugin for pytest*, https://pytest-cov.readthedocs.io/en/latest/, Data ultimei accesări: 10 mai 2026.
 
-3. Cosmic Ray Documentation. *Cosmic Ray: Mutation Testing for Python*.
-   https://cosmic-ray.readthedocs.io/en/latest/
+[3] Cosmic Ray Documentation, *Cosmic Ray: Mutation Testing for Python*, https://cosmic-ray.readthedocs.io/en/latest/, Data ultimei accesări: 10 mai 2026.
 
-4. Ammann, P., Offutt, J. (2016). *Introduction to Software Testing*
-   (2nd ed.). Cambridge University Press.
+[4] Python Software Foundation, *unittest — Unit testing framework*, https://docs.python.org/3/library/unittest.html, Data ultimei accesări: 10 mai 2026.
 
-5. Python Software Foundation. *unittest — Unit testing framework*.
-   https://docs.python.org/3/library/unittest.html
+[5] Ammann, P., Offutt, J., *Introduction to Software Testing* (2nd ed.), Cambridge University Press, 2016.
 
-6. Jia, Y., Harman, M. (2011). *An Analysis and Survey of the Development
-   of Mutation Testing*. IEEE Transactions on Software Engineering, 37(5), 649-678.
+[6] Jia, Y., Harman, M., An Analysis and Survey of the Development of Mutation Testing, IEEE Transactions on Software Engineering, vol. 37, nr. 5, 2011, pp. 649-678.
+
+[7] Claude, https://claude.ai, Data generării: 10 mai 2026.
