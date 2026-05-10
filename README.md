@@ -1,3 +1,5 @@
+# Proiect Constantin Marius-Cristian, anul III, INFORMATICA-ID 
+# T1 – Testare Unitară în Python: `BankAccount`
 # T1 – Testare Unitară în Python: `BankAccount`
 
 ## Descriere
