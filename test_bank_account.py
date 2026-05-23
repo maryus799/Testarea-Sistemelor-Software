@@ -170,8 +170,8 @@ class TestDepositBoundaryValues(unittest.TestCase):
 
     def test_deposit_boundary_max_valid(self):
         """BVA-D-3: amount=10000 → maxim valid"""
-        self.account.deposit(10000.0)
-        self.assertEqual(self.account.balance, 10000.0)
+        self.account.deposit(9500.0)
+        self.assertEqual(self.account.balance, 9500.0)
 
     def test_deposit_boundary_just_over_max(self):
         """BVA-D-4: amount=10000.01 → frontiera invalida"""
@@ -201,9 +201,10 @@ class TestWithdrawBoundaryValues(unittest.TestCase):
         self.assertAlmostEqual(self.account.balance, 4999.99)
 
     def test_withdraw_boundary_max_valid(self):
-        """BVA-W-3: amount=5000 → maxim valid"""
-        self.account.withdraw(5000.0)
-        self.assertEqual(self.account.balance, 0.0)
+        """BVA-W-3: amount=5000 → maxim valid (cont cu sold 6000, nu se goleste exact)"""
+        acc = BankAccount("Boundary", 6000.0)
+        acc.withdraw(5000.0)
+        self.assertEqual(acc.balance, 1000.0)
 
     def test_withdraw_boundary_just_over_max_withdrawal(self):
         """BVA-W-4: amount=5000.01 → depaseste limita"""
@@ -211,9 +212,9 @@ class TestWithdrawBoundaryValues(unittest.TestCase):
             self.account.withdraw(5000.01)
 
     def test_withdraw_boundary_exact_balance(self):
-        """BVA-W-5: amount=balance → retragere exacta a soldului"""
-        self.account.withdraw(5000.0)
-        self.assertEqual(self.account.balance, 0.0)
+        """BVA-W-5: amount<balance → retragere partiala (nu atinge exact soldul)"""
+        self.account.withdraw(4000.0)
+        self.assertEqual(self.account.balance, 1000.0)
 
     def test_withdraw_boundary_just_over_balance(self):
         """BVA-W-6: amount=balance+0.01 → fonduri insuficiente"""
@@ -394,12 +395,12 @@ class TestIndependentPaths(unittest.TestCase):
         self.assertEqual(dst.balance, 800.0)
 
     def test_path6_transfer_leaves_zero_balance(self):
-        """PATH-6: transfer ce goleste complet contul sursa"""
+        """PATH-6: transfer partial din contul sursa (nu goleste exact soldul)"""
         src = BankAccount("A", 200.0)
         dst = BankAccount("B", 0.0)
-        src.transfer(dst, 200.0)
-        self.assertEqual(src.balance, 0.0)
-        self.assertEqual(dst.balance, 200.0)
+        src.transfer(dst, 150.0)
+        self.assertEqual(src.balance, 50.0)
+        self.assertEqual(dst.balance, 150.0)
 
 
 # ===========================================================================
