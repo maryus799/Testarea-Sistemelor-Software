@@ -316,6 +316,71 @@ surviving mutants: 7 (5.47%)
 
 ---
 
+## Raport privind folosirea unui tool de AI (Claude)
+
+Pentru această parte a proiectului s-a utilizat tool-ul de inteligență artificială **Claude** [7] în scopul generării unei suite de teste alternative pentru clasa `BankAccount`. Testele autogenerate au fost salvate în fișierul `test_bank_account_ai.py` și au fost comparate cu suita proprie, dezvoltată manual în `test_bank_account.py`.
+
+### Prompt utilizat
+
+Promptul transmis tool-ului AI a fost următorul:
+
+> *„Genereaza-mi te rog teste pentru clasa mea bank_account.py pentru a compara cu testele mele?"*
+
+### Răspuns AI
+
+Pe baza promptului, Claude a generat o suită de 20 de teste unitare organizate în clasa `TestBankAccountAI`, acoperind operațiile principale (`deposit`, `withdraw`, `transfer`, `deposit_multiple`) prin cazuri valide și cazuri care aruncă excepții. Răspunsul complet, împreună cu tabelul de comparație furnizat de tool, este prezentat în captura de mai jos.
+
+![Răspuns AI și comparație](imagini/raspuns_ai.png)
+
+### Rularea testelor autogenerate
+
+Testele generate de AI au fost rulate cu `pytest`. Toate cele 20 de teste trec (20/20, 100%) într-un timp de ~0.06s.
+
+```bash
+python -m pytest test_bank_account_ai.py -v
+```
+
+![Rulare teste AI](imagini/rulare_20_teste.png)
+
+### Testarea prin mutanți a suitei AI
+
+Pentru o comparație obiectivă a calității, suita autogenerată a fost supusă aceluiași proces de testare prin mutanți (`cosmic-ray`), pe aceeași configurație de 128 de mutanți generați.
+
+```bash
+cosmic-ray exec cosmic-ray.toml session.sqlite
+cr-report session.sqlite
+```
+
+Rezultatul rulării arată o rată de supraviețuire de **18.75%** (24 de mutanți supraviețuitori din 128), semnificativ mai mare decât cea a suitei proprii.
+
+![Mutanți supraviețuitori suita AI](imagini/mutanti_supravietuire.png)
+
+### Comparație suită proprie vs. suită autogenerată
+
+| Criteriu | Teste AI (Claude) | Teste proprii (manuale) |
+|---|---|---|
+| Număr teste | 20 | 76 |
+| Strategii aplicate | clase de echivalență de bază | toate cele 5 strategii |
+| Analiza valorilor de frontieră | lipsește | completă (0, 0.01, 9999.99, 10000, 10000.01) |
+| Acoperire structurală | nu urmărește nodurile grafului | 100% statement + branch |
+| Circuite independente (McCabe) | lipsesc | 6 circuite |
+| Teste killer pentru mutanți | lipsesc | 2 teste dedicate |
+| Mutanți supraviețuitori | 24 (18.75%) | 7 (5.47%), toți echivalenți |
+
+### Interpretarea diferențelor
+
+Diferențele dintre cele două suite sunt semnificative atât cantitativ, cât și calitativ. Suita autogenerată conține un număr redus de teste (20 față de 76) și se limitează la o partiționare de bază în clase de echivalență, generând câte un caz valid și câteva cazuri de excepție pentru fiecare metodă.
+
+Principala limitare a testelor AI este absența unei strategii structurale: tool-ul nu pornește de la graful de flux de control, deci nu garantează parcurgerea tuturor nodurilor și ramurilor. De asemenea, nu realizează analiza valorilor de frontieră — valorile critice precum `MAX_DEPOSIT` exact, limita inclusivă a parametrului `max_amount` sau pragul `min_amount + 0.01` nu sunt testate. În plus, suita AI nu conține teste killer dedicate pentru mutanții neechivalenți identificați în suita proprie (operatorii `>` față de `>=` din `deposit()` și `withdraw()`).
+
+Aceste limitări se reflectă direct în rezultatul testării prin mutanți: suita AI lasă în viață 24 de mutanți (18.75%), în timp ce suita proprie lasă doar 7 mutanți, toți demonstrați a fi echivalenți. Cu alte cuvinte, testele autogenerate detectează mai puține defecte injectate, ceea ce confirmă că o suită construită sistematic, pe baza tuturor celor cinci strategii de testare, oferă o acoperire net superioară.
+
+### Concluzie
+
+Tool-ul de AI [7] s-a dovedit util pentru generarea rapidă a unui set inițial de teste funcționale de bază, fiind un bun punct de plecare. Totuși, pentru o testare riguroasă — cu acoperire structurală completă, analiză a valorilor de frontieră și uciderea mutanților neechivalenți — intervenția manuală bazată pe strategiile prezentate la curs rămâne indispensabilă.
+
+---
+
 ## Configurație hardware și software
 
 ### Hardware
@@ -403,4 +468,4 @@ cr-report session.sqlite --surviving-only
 
 [6] Jia, Y., Harman, M., An Analysis and Survey of the Development of Mutation Testing, IEEE Transactions on Software Engineering, vol. 37, nr. 5, 2011, pp. 649-678.
 
-[7] Claude, https://claude.ai, Data generării: 10 mai 2026.
+[7] Claude, https://claude.ai, Data generării: 10 mai 2026 si 25 mai 2026.
